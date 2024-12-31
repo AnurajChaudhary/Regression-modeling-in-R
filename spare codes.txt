@@ -1,0 +1,184 @@
+#for avg score(new row)
+> sum_score <- movies$critics_score + movies$audience_score
+> movies <- movies %>% mutate( avg_score = sum_score/2)
+
+
+# for relationship between genre and score(table)
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by( genre) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+#plot
+movies %>% ggplot( aes( x = reorder(genre ,desc(avg_score)) , y = avg_score)) + geom_boxplot() + labs( title = "Relationship between genre and average score" , x = "Genre of the movie" , y = "average score")
+#linear model
+lm_genre <- lm( avg_score ~ genre , movies)
+summary(lm_genre)
+
+
+#for relationship between title_type and score(table)
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(title_type) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+#plot
+movies %>% ggplot( aes( title_type , avg_score)) + geom_boxplot()
+#linear model
+lm_title_type <- lm( avg_score ~ title_type , movies)
+summary(title_type)
+
+
+#for relationship between studio and scores
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(studio) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score) , mean_avg_score = mean(avg_score)) %>% arrange( desc(mean_avg_score))
+#plot
+movies %>% ggplot( aes( reorder( studio , desc(avg_score)) , avg_score)) + geom_boxplot(fill = "light green") + labs( y = "average score"  , x = "name of studio") + theme(axis.text.x = element_text(angle = 90 , size = 5))
+#linear model
+lm_studio <- lm( avg_score ~ studio , movies)
+summary(lm_studio)
+
+
+#for relationship between mpaa_rating and score(table)
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(mpaa_rating) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+#plot 
+movies %>% ggplot( aes( mpaa_rating , avg_score)) + geom_boxplot()
+#linear model
+lm_mpaa<- lm( avg_score ~ mpaa_rating , movies)
+summary(lm_mpaa)
+
+
+#relationship between Imdb_num_votes and scores
+#plot
+ggplot(movies , aes( imdb_num_votes , avg_score) ) + geom_jitter() +geom_point() + geom_smooth( method =  "lm") + labs( title = "regression plot of scores to number of votes" , x = "Number of votes" , y = "Average score") + theme( axis.text.x = element_text( angle = 90))
+#linear model
+lm_votes <- lm(avg_score ~ imdb_num_votes , movies)
+summary(lm_votes)
+
+
+#to determne whether if cast or director has won any awards
+movies <- movies %>% mutate(cast_won_award = if_else( best_actor_win == "yes" | best_actress_win == "yes" | best_dir_win == "yes" , "yes" , 'no'))
+
+
+# relationship between awards won by actor actress or director
+#plot
+ggplot( movies , aes(y = avg_score  ,x = cast_won_award)) + geom_boxplot() + labs( x = "awards won by actor, actress or director" , y = "average score" )
+#multiple linear model
+mlm_awards_aad <- lm(avg_score ~ best_actor_win + best_actress_win + best_dir_win , movies)
+summary(mlm_awards_aad)
+
+
+#relationship between scores and nomination for best picture
+movies %>% ggplot( aes( x = best_pic_nom , y = avg_score)) + geom_boxplot() + labs( title = "relationship between avg score and if the movie was nominated for best picture" , x ="Best picture nomination" , x = "Average score on rotten tomatoes")
+#linear model
+lm_amnom <- lm(avg_score ~ best_pic_nom , movies )
+summary(lm_amnom)
+
+
+#relationship between average scores and runtime of the movie
+#plot
+movies %>% ggplot( aes( x = runtime , y = avg_score)) + geom_point() +geom_jitter() + geom_smooth( method = "lm") + labs( title = " Relationship between average score and runtime" , y = "average score" , x = "Runtime in minutes")
+#linear model
+lm_runtime <- lm(avg_score ~ runtime, movies)
+summary(lm_runtime)
+
+
+#relationship between average score and academy award won status
+#plot
+movies %>% ggplot( aes( x = best_pic_win , y = avg_score)) + geom_boxplot() + labs( title = "Realtionship between average score and academy awards won status" , x = "academy award won status" , y = "average score")
+#linear model
+lm_amwon <- lm( avg_score ~ best_pic_win , movies)
+summary(lm_amwon)
+
+
+#relationship between average score and theater release month
+#plot
+ggplot( movies ,aes(x = reorder( as.factor(thtr_rel_month) , desc(avg_score)) , y = avg_score )) + geom_point( ) + geom_smooth( method = "lm") + labs( title = "Relationship between average score and release month" , x = "theater release month" , y =  "average score")
+#linear model
+lm_remo <- lm( avg_score ~ thtr_rel_month , movies)
+summary(lm_remo)
+
+
+#multiple regression model
+#formula 1
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + studio + best_pic_nom + best_pic_win + best_actor_win +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)
+#r_squared = 0.3434
+
+#formula 2 remove studio
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actor_win +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)
+#r_square = 0.3048
+
+#formula 3 remove best actor win
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + studio +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)
+#r_squared = 0.3438
+
+#formula 4 remove best actress win
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + studio +best_actor_win + best_dir_win , movies)
+summary(mlm_scores)
+#r_squared = 0.344
+
+#formula 5 remove title_type
+mlm_scores <- lm(avg_score ~  genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3344
+
+formula 6 remove genre
+mlm_scores <- lm(avg_score ~  title_type + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.297
+
+formula 7 remove runtime
+mlm_scores <- lm(avg_score ~  title_type + genre + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3257
+
+formula 8 remove mpaa_rating
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3237
+
+formula 9 remove best_pic_nom
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + mpaa_rating + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3259
+
+formula 10 remove best_pic_win
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3444
+
+formula 11 remove best_dir_win
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_actor_win + best_pic_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3402
+
+Formula 11 Second phase remove best_actor_win
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_dir_win + best_pic_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3438
+
+formula 11 Second phase remove best_actress_win
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win + best_pic_win +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3443
+
+formula 12 Next phase remove best_pic_win
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3454
+
+formula 13 Second phase remove title type
+mlm_scores <- lm(avg_score ~  genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3361
+
+formula 14 Third phase remove genre
+mlm_scores <- lm(avg_score ~  title_type + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.2983
+
+formula 15 Third phase remove runtime
+mlm_scores <- lm(avg_score ~  title_type + genre + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)
+#r_squared = 0.3303
+
+formula 16 Third phase remove mpaa_rating
+mlm_scores <- lm(avg_score ~  title_type + runtime + best_pic_nom + genre  + best_dir_win  +studio , movies)
+> summary(mlm_scores)
+
+#multiple regression model final
+mlm_scores_final <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)

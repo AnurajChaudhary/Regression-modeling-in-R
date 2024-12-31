@@ -1,0 +1,374 @@
+---
+title: "Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `movies`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("C:/Users/user/Desktop/coursera statistics with r materials/course 3 regression model/final project/movies.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+IMDB and Rotten tomatoes are the websites which keep track of all the movies and tv shows that has ever released in hollywood and few out of hollywood moves and present a platfor where audience of that movie are able to vote and score the said movie according to their preference. Since this grading and scoring is done in voluntary basis and is collected all over the world we can assume that the data collection is random and independent of each other. However since only the audience with internet access and keen interest in website are willing to vote or score the movie we can assume there is some degree of stratification in the sample.
+the data is collected from these website through APIs and different data scraping tools.
+
+* * *
+
+## Part 2: Research question
+
+As mentioned in the job prospects my seniors's topic of interest is to determine what makes a movie more popular among the audience as well as critics. So I would majorly revolve around figuring out the multiple regression model which which best predicts the average score of the movie. For answering my question I will use average of bot audience and critics score in rotten tomatoes as a standard score because rotten tomatoes scores are collected by dicrect contact with the target audience.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+
+
+*###For avg score(new row)*
+I decided to use both critics and audience score and take the average of both as the base standard score that will be numeric representative of popularity.
+```{r}
+sum_score <- movies$critics_score + movies$audience_score
+movies <- movies %>% mutate( avg_score = sum_score/2)
+```
+
+*###For relationship between genre and score(table)*
+The relationship between genre and average score of the movie was analyzed usin the following code
+```{r}
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by( genre) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+```
+As indicative from the following table there does seem to be a relationship between the genre of the film and the average scoring of the movie by both the critics and the audience. Further plotting the relationship can help us visualize the relationship graphically.
+```{r}
+movies %>% ggplot( aes( x = reorder(genre ,desc(avg_score)) , y = avg_score)) + geom_boxplot() + labs( title = "Relationship between genre and average score" , x = "Genre of the movie" , y = "average score") + theme(axis.text.x = element_text(angle = 90 ))
+```
+As indicative from the following barplot we can see the obvious relationship between the score and genre of the movie however, few of the sub-categories are spread over large range that indicates there are other facctors within the group.
+```{r}
+lm_genre <- lm( avg_score ~ genre , movies)
+summary(lm_genre)
+```
+from above regression output we can sy that if linear regression model is plotted between genre and average score genre will be able to explain 21 % of variability in the sverage score. which indicates it can be good predictor of the score.
+
+*###for relationship between title_type and score:*
+the relationship between type of the title and average score of the movie is listed below
+```{r}
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(title_type) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+```
+Here in this case documentary does seem to score higher in general in comparison to other title types. it can be better visualized using bar plot
+```{r}
+movies %>% ggplot( aes( reorder( title_type , desc(avg_score)) , avg_score)) + geom_boxplot() + labs( title = "Relationship between type of the title and its average score" , x= "Type of title" , y= " average score" )
+```
+the linear model for the following relationship is given below.
+```{r}
+lm_title_type <- lm( avg_score ~ title_type , movies)
+summary(lm_title_type)
+```
+here form the above regression model it shows that title type can explain 12.02% of variability in average score of movies.
+
+*###for relationship between studio and scores*
+the relationship between the studio and the relative score of the movie is tabulated below.
+```{r}
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(studio) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score) , mean_avg_score = mean(avg_score)) %>% arrange( desc(mean_avg_score))
+```
+the bar plot below clearly indicates the decreasing relationship between the the name of studio and the average score of the movie. I hypothesize that different studio are able to allocate the budget differently and the budget of the movie ultimately determines the scoring of the movie, high budget movie tends to have better aesthetic and sonar qualityies.
+```{r}
+movies %>% ggplot( aes( reorder( studio , desc(avg_score)) , avg_score)) + geom_boxplot(fill = "light green") + labs( y = "average score"  , x = "name of studio") + theme(axis.text.x = element_text(angle = 90 , size = 5))
+```
+the linera model of studio and the score of the movie is summarised below.
+```{r}
+lm_studio <- lm( avg_score ~ studio , movies)
+summary(lm_studio)$adj.r.squared
+```
+the out put suggests that name of studio can predict 13.56% of variability in the average score.
+
+*###for relationship between mpaa_rating and score*
+```{r}
+movies %>% filter(!is.na(critics_score) , !is.na(audience_score)) %>% group_by(mpaa_rating) %>% summarise( avg_cri = mean(critics_score) , avg_aud = mean(audience_score)) %>% arrange( desc(avg_cri))
+```
+```{r} 
+movies %>% ggplot( aes( reorder( mpaa_rating , desc(avg_score)) , avg_score)) + geom_boxplot() + labs( title = " relationship between rating of the film and its average score" , x = " Rating of the film" , y = "average sccore of the film")
+```
+```{r}
+lm_mpaa<- lm( avg_score ~ mpaa_rating , movies)
+summary(lm_mpaa)$adj.r.squared
+```
+here, r squared value suggest that rating of the film can explain 9 percent of variability in average score of the movie.
+
+*###relationship between Imdb_num_votes and scores*
+
+```{r}
+ggplot(movies , aes( imdb_num_votes , avg_score) ) + geom_jitter() +geom_point() + geom_smooth( method =  "lm") + labs( title = "regression plot of scores to number of votes" , x = "Number of votes" , y = "Average score") + theme( axis.text.x = element_text( angle = 90))
+```
+here form the following plt the regression line suggest that there is ever so slightly increase in the average score of the movie as the nuumber of votes increase. however it may be due to the fact that more popular movies tend to have higher number of people watch them and subsequently rate them that lowly popular movie. Hence number of votes cannot be translated to be cause of high average score.
+
+```{r}
+lm_votes <- lm(avg_score ~ imdb_num_votes , movies)
+summary(lm_votes)
+```
+As predicted above the number of votes can only explain 6 percent of variability in the average sccore.
+
+
+*###To determne whether if cast or director has won any awards*
+following code was used to determine that whether the cast or director has won any award previously. the code creates a new column stating "yes" or "no"
+```{r}
+movies <- movies %>% mutate(cast_won_award = if_else( best_actor_win == "yes" | best_actress_win == "yes" | best_dir_win == "yes" , "yes" , 'no'))
+```
+
+
+*###Relationship between awards won by actor actress or director*
+
+```{r}
+ggplot( movies , aes(y = avg_score  ,x = cast_won_award)) + geom_boxplot() + labs( x = "awards won by actor, actress or director" , y = "average score" )
+```
+so yes there definetely seem to be some relationship between award won and the average score but to be conclusive about which of the award matter the most following regression output was created.
+```{r}
+mlm_awards_aad <- lm(avg_score ~ best_actor_win + best_actress_win + best_dir_win , movies)
+summary(mlm_awards_aad)
+```
+from the following regression output we may conclude that the award of the director seem to be most significant predictor of the average score amoug three criteria.
+
+
+*###relationship between scores and nomination for best picture*
+Following codes were used to plot the box plot visualizing the data indicative of relationship between the best picture nomination and the average score of the movie.
+```{r}
+movies %>% ggplot( aes( x = best_pic_nom , y = avg_score)) + geom_boxplot() + labs( title = "relationship between avg score and if the movie was nominated for best picture" , x ="Best picture nomination" , x = "Average score on rotten tomatoes")
+```
+the result clearly indicates that the higher score movies tend to be nominated.
+
+```{r}
+lm_amnom <- lm(avg_score ~ best_pic_nom , movies )
+summary(lm_amnom)
+```
+the r squared value suggest it can explain aboyt 4 pecent of variability in average score.
+
+
+*###relationship between average scores and runtime of the movie*
+following codes were used to visualize the relationship between the average scores and the runtime of the movie.
+```{r}
+movies %>% ggplot( aes( x = runtime , y = avg_score)) + geom_point() +geom_jitter() + geom_smooth( method = "lm") + labs( title = " Relationship between average score and runtime" , y = "average score" , x = "Runtime in minutes")
+```
+there seem to be some relationship between the runtime of the movie and the average score of the movie. the longer movie seem to be well received and are generally highly scored.
+```{r}
+lm_runtime <- lm(avg_score ~ runtime, movies)
+summary(lm_runtime)
+```
+the linear model suggest that runtime of the movie can explain about 3.47 percent of the variability in the average score of the movie.
+
+*###relationship between average score and academy award won status*
+Though it must be obvious that the movies which tend to have higher score are more likely to win an award however the relationship of the award won and the average score must be able to be quantifiable by the mathematics to establish the relationship.
+```{r}
+movies %>% ggplot( aes( x = best_pic_win , y = avg_score)) + geom_boxplot() + labs( title = "Realtionship between average score and academy awards won status" , x = "academy award won status" , y = "average score")
+```
+
+```{r}
+lm_amwon <- lm( avg_score ~ best_pic_win , movies)
+summary(lm_amwon)
+```
+the R squared value of the value of the linear model however suggest that only 1 percent of the variability in the average score can be explained by the status of award won.
+
+*###relationship between average score and theater release month*
+the release month of the movie can also be one of the factor of the popularity of the movie and increase the average score. Some months of the year can potentially influence the mood of the voters and for example the holiday seasons. 
+```{r}
+ggplot( movies ,aes(x = reorder( as.factor(thtr_rel_month) , desc(avg_score)) , y = avg_score )) + geom_jitter( ) + geom_smooth( method = "lm") + labs( title = "Relationship between average score and release month" , x = "theater release month" , y =  "average score")
+```
+the plot however does'nt indicate any such relation thus the speculation can be dismissed and we can conclude that there is no such relationship
+```{r}
+lm_remo <- lm( avg_score ~ thtr_rel_month , movies)
+summary(lm_remo)
+```
+excessive low r squared is the indicative of the said fact
+
+* * *
+
+## Part 4: Modeling
+I decided to use the top down approach for the determination of the best multiple regression model using R squared method. I.e the method used was starting with all the variables in the data that could be effective in explaining the variability in the average score and remove them from top to down according to their adjusted r squared value. The variable which accounted for maximum r squared value were used in the final multiple regression model. 
+*###Full regression model*
+```{r}
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + studio + best_pic_nom + best_pic_win + best_actor_win +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)$adj.r.squared
+```
+the r squared value indicates that the the current model can explain 34.33% of variability in the average score of movies.
+
+*###First phase*
+
+In this phase we sequentially remove all of the variables from the model one by one with replacement to discover removal of which variable accounts for increase in adjusted r squared value
+####remove studio
+```{r}
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actor_win +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove best actor win
+```{r}
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + studio +best_actress_win + best_dir_win , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove best actress win
+```{r}
+mlm_scores <- lm(avg_score ~ title_type + genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + studio +best_actor_win + best_dir_win , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove title_type
+```{r}
+mlm_scores <- lm(avg_score ~  genre + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove genre
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + runtime + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove runtime
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + mpaa_rating + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove mpaa_ratin
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove best_pic_nom
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + mpaa_rating + best_pic_win + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove best_pic_win
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_actor_win + best_dir_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+
+####remove best_dir_win
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_actor_win + best_pic_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+*###Second Phase*
+
+In the second phase we sequentially remove all the variable which lead to increase in the r squared value when they were removed. from the first phase we realized that removal of `best_actor_win` , `best_actress_win` and `best_pic_win` caused the increase in the r squared value hence in thsi phase we will remove them from the model.
+
+####remove best_actor_win
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating + best_actress_win + best_dir_win + best_pic_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+####remove best_actress_win
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win + best_pic_win +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+####remove best_pic_win
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+*###Third phase:*
+
+In this phase we checked that if there are any other variables that can be removed from the model that can increase the adjusted r squared model
+
+####remove title type
+```{r}
+mlm_scores <- lm(avg_score ~  genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+####remove genre
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+####remove runtime
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + genre + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+
+####remove mpaa_rating
+```{r}
+mlm_scores <- lm(avg_score ~  title_type + runtime + best_pic_nom + genre  + best_dir_win  +studio , movies)
+summary(mlm_scores)$adj.r.squared
+```
+in above code all the lower significant variables were removed sequentially and output suggest that no removal of any variable leads to further decrease in the adjusted r squared value.
+
+*###multiple regression model final*
+
+Finally below regression model was found to be most effective predictor of the average score.
+```{r}
+mlm_scores_final <- lm(avg_score ~  title_type + genre + runtime + best_pic_nom + mpaa_rating  + best_dir_win  +studio , movies)
+```
+
+* * *
+
+## Part 5: Prediction
+
+I used movie with the following details to predict the score under the final regression model.
+Name: Deadpool
+Title type : Feature Film
+Genre : Action & Adventure
+runtime : 108
+best pic nomination : yes
+mpaa rating : R
+best_dir_win : no
+studio : 20th Century Fox
+
+the data frame was created using the following code
+```{r}
+mov_details <- data.frame( title_type = "Feature Film" , genre = "Action & Adventure" , runtime = 108 , best_pic_nom = "yes" , mpaa_rating = "R" , best_dir_win = "no" , studio = "20th Century Fox")
+```
+the code used for prediction was:
+```{r}
+predict(mlm_scores_final , mov_details)
+```
+here, we can see that the predicted score is pretty far off the original score of 87.5 . this is evident that our prediction model is not the perfect model for the prediction and there are still some variability missing from the linear model.
+we can also create a prediction interval of 95% using the following code.
+```{r}
+predict(mlm_scores_final , mov_details , interval = "prediction" , 0.95)
+```
+here we can see that our prediction interval does include the the original score of the movei on rottem tomatoes.
+* * *
+
+## Part 6: Conclusion
+
+The best possible regression model was created and the predicted score and prediction interval of a movie was created which did include the actual score of the movie on rotten tomatoes
